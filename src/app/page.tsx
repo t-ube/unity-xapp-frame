@@ -2,6 +2,7 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { Xumm } from 'xumm';
+import styles from './main.module.css';
 
 declare global {
   interface Window {
@@ -10,7 +11,8 @@ declare global {
 }
 
 const UnityGame: React.FC = () => {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const webviewRef = useRef<HTMLIFrameElement>(null);
+  const [windowSize, setWindowSize] = useState({ width: '100vw', height: '100vh' });
   const [unityInstance, setUnityInstance] = useState<any>(null);
   const [bearer, setBearer] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -45,6 +47,13 @@ const UnityGame: React.FC = () => {
       }
     };
 
+    const handleResize = () => {
+      setWindowSize({ width: `${window.innerWidth}px`, height: `${window.innerHeight}px` });
+    };
+
+    window.addEventListener('resize', handleResize);
+    handleResize();
+
     const handleMessage = (event: MessageEvent) => {
       if (event.data.type === 'FROM_UNITY') {
         // ここでUnityからのメッセージを処理
@@ -67,36 +76,6 @@ const UnityGame: React.FC = () => {
     };
   }, [xumm,bearer]);
 
-  useEffect(() => {
-    const script = document.createElement('script');
-    script.src = "./Build/Build.loader.js";
-    script.async = true;
-    
-    script.onload = () => {
-      window.createUnityInstance(canvasRef.current, {
-        dataUrl: "./Build/Build.data.unityweb",
-        frameworkUrl: "./Build/Build.framework.js.unityweb",
-        codeUrl: "./Build/Build.wasm.unityweb",
-        streamingAssetsUrl: "StreamingAssets",
-        companyName: "YourCompanyName",
-        productName: "YourProductName",
-        productVersion: "0.1",
-      }, (progress:any) => {
-        console.log(`Loading: ${(progress * 100).toFixed(2)}%`);
-      }).then((unityInstance:any) => {
-        setUnityInstance(unityInstance);
-        console.log("Unity instance created successfully");
-      }).catch((error:any) => {
-        console.error("Unity instance creation failed:", error);
-      });
-    };
-
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
 
   const sendMessageToUnity = (message: string) => {
     console.log('sendMessageToUnity');
@@ -109,8 +88,13 @@ const UnityGame: React.FC = () => {
   };
 
   return (
-  <div id="unity-container" style={{ width: '100%', height: '100%' }}>
-    <canvas id="unity-canvas" ref={canvasRef} style={{ width: '100%', height: '100%' }} />
+  <div id="unity-container" className={styles.fullscreen} style={windowSize}>
+    <iframe
+      ref={webviewRef}
+      src="https://unity-xapp.pages.dev"
+      className={styles.fullscreenIframe}
+      allow="autoplay; fullscreen; encrypted-media"
+    />
     <button onClick={() => sendMessageToUnity('Hello from Next.js!')}>
       Send Message to Unity
     </button>
